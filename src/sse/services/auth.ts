@@ -40,6 +40,10 @@ import { toNumber } from "@/shared/utils/numeric";
 import { timingSafeCompare } from "@/shared/utils/timingSafeCompare";
 import { isMicrosoftDesignerWebRetiredProviderId } from "@/shared/constants/designerWebRetirement";
 import { isRuntimeRetiredProviderId } from "@/shared/constants/providerRetirement";
+import {
+  isAnonymousFallbackBlockedBySafetyPolicy,
+  isProviderBlockedBySafetyPolicy,
+} from "@/shared/constants/providerSafety";
 import { allowlistPermitsSyntheticNoAuth } from "./noAuthAllowlist";
 import {
   createLazyConnectionView,
@@ -787,6 +791,8 @@ async function maybeSyntheticNoAuthFallback(
   allowedConnections: string[] | null = null
 ) {
   if (!providerCanUseSyntheticNoAuthFallback(providerId)) return null;
+  // Safe-providers policy: keyless anonymous access is never used.
+  if (isAnonymousFallbackBlockedBySafetyPolicy(providerId)) return null;
   // #9057: a restricted key must NOT reach free providers (OpenCode Free, etc.) through the
   // synthetic "noauth" connection unless its allowedConnections names it.
   if (!allowlistPermitsSyntheticNoAuth(allowedConnections)) return null;
@@ -1184,6 +1190,17 @@ export async function getProviderCredentials(
   if (isRuntimeRetiredProviderId(provider)) {
     invalidateManagedLease(options, "CONNECTION_INELIGIBLE");
     log.warn("AUTH", "Retired provider rejected before credential selection");
+    return null;
+  }
+
+  // Safe-providers policy: never hand out credentials for a blocked provider
+  // (checked on both the raw id and its canonical form).
+  if (
+    isProviderBlockedBySafetyPolicy(provider) ||
+    isProviderBlockedBySafetyPolicy(resolveProviderId(provider))
+  ) {
+    invalidateManagedLease(options, "CONNECTION_INELIGIBLE");
+    log.warn("AUTH", `${provider} | blocked by safe-providers policy before credential selection`);
     return null;
   }
 

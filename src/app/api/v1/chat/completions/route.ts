@@ -33,6 +33,7 @@ import {
   withCompressionHeaderEcho,
 } from "@/shared/utils/compressionHeaderEcho";
 import { resolveModelAliasWithSeedFallbackOnBody } from "@/lib/modelAliasResolver";
+import { isProviderSafetyError, assertModelProviderAllowedBySafetyPolicy } from "@/shared/constants/providerSafety";
 import { enforceApiKeyPolicy } from "@/shared/utils/apiKeyPolicy";
 import {
   assertRuntimeModelProviderAvailable,
@@ -228,8 +229,9 @@ export async function POST(request) {
         // healthy provider before getModelInfo or the executor tombstones see it.
         try {
           assertRuntimeModelProviderAvailable(parsedBody.model);
+          assertModelProviderAllowedBySafetyPolicy(parsedBody.model);
         } catch (error) {
-          if (isRuntimeProviderRetirementError(error)) {
+          if (isRuntimeProviderRetirementError(error) || isProviderSafetyError(error)) {
             return finishAdmission(
               errorResponse(error.status, error.message, {
                 type: "provider_error",

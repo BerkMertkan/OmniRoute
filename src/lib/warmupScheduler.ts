@@ -1,3 +1,4 @@
+import { isProviderBlockedBySafetyPolicy } from "@/shared/constants/providerSafety";
 import { getProviderConnections } from "@/lib/db/providers";
 import { getSettings } from "@/lib/db/settings";
 import { resolveProxyForConnection } from "@/lib/db/settings";
@@ -250,6 +251,8 @@ function classifyForWarmup(conn: {
   providerSpecificData?: unknown;
 }): WarmupPath {
   if (conn.provider !== "claude") return "skip";
+  // Safe-providers policy: never ping a blocked subscription provider.
+  if (isProviderBlockedBySafetyPolicy(conn.provider)) return "skip";
   if (conn.authType === "api_key" || conn.authType === "apikey") return "skip";
   if (conn.authType !== "oauth") return "skip";
   if (!conn.accessToken) return "skip";

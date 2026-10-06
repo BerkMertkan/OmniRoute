@@ -20,6 +20,10 @@
  * no real timers, no real DB, no real network.
  */
 
+import {
+  assertProviderAllowedBySafetyPolicy,
+  isProviderBlockedBySafetyPolicy,
+} from "@/shared/constants/providerSafety";
 import { logger } from "@omniroute/open-sse/utils/logger.ts";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
 import type { BaseExecutor } from "@omniroute/open-sse/executors/base";
@@ -109,6 +113,8 @@ async function loadQuotaAutoPingExecutor(provider: string): Promise<BaseExecutor
   if (provider !== "codex") {
     throw new Error(`Quota auto-ping does not support provider "${provider}"`);
   }
+  // Safe-providers policy: refuse to ping a blocked subscription provider.
+  assertProviderAllowedBySafetyPolicy(provider);
 
   try {
     codexExecutorPromise ??= import("@omniroute/open-sse/executors/codex.ts").then(
@@ -532,6 +538,8 @@ export async function runQuotaAutoPingTick(
   try {
     const settings = await deps.getSettings();
     for (const [provider, providerConfig] of Object.entries(QUOTA_AUTOPING_PROVIDERS)) {
+      // Safe-providers policy: silently skip blocked subscription providers.
+      if (isProviderBlockedBySafetyPolicy(provider)) continue;
       const enabledMap = getEnabledConnectionIds(settings, providerConfig);
       if (Object.keys(enabledMap).length === 0) continue;
       const pingModel = await resolveProviderPingModel(provider as "codex", deps, state, nowMs);

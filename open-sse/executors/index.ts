@@ -1,6 +1,7 @@
 import { SEARCH_PROVIDERS } from "../config/searchRegistry.ts";
 import { assertMicrosoftDesignerWebProviderAvailable } from "@/shared/constants/designerWebRetirement";
 import { assertRuntimeProviderAvailable } from "@/shared/constants/providerRetirement";
+import { assertProviderAllowedBySafetyPolicy } from "@/shared/constants/providerSafety";
 import { assertCommonChatGptWebProviderAvailable } from "@/shared/constants/chatgptWebRetirement";
 import { registerLazyExecutor, loadRegisteredExecutor, hasRegisteredExecutor } from "./registry.ts";
 // Type-only: pulls no runtime code, keeps DefaultExecutor the only eager class.
@@ -216,6 +217,7 @@ const CHAT_UNSUPPORTED_SEARCH_PROVIDERS = new Set(Object.keys(SEARCH_PROVIDERS))
 export async function getExecutor(provider: string): Promise<BaseExecutor> {
   assertMicrosoftDesignerWebProviderAvailable(provider);
   assertRuntimeProviderAvailable(provider);
+  assertProviderAllowedBySafetyPolicy(provider);
   assertCommonChatGptWebProviderAvailable(provider);
   const loaded = await loadRegisteredExecutor(provider);
   if (loaded) return loaded;

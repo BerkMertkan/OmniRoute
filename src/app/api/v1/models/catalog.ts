@@ -1,4 +1,5 @@
 import { PROVIDER_MODELS, PROVIDER_ID_TO_ALIAS } from "@/shared/constants/models";
+import { isProviderBlockedBySafetyPolicy } from "@/shared/constants/providerSafety";
 import { NOAUTH_PROVIDERS } from "@/shared/constants/providers";
 import { getCombos } from "@/lib/db/combos";
 import { isComboNameAllowedForKey } from "@/shared/utils/apiKeyPolicy";
@@ -2054,6 +2055,26 @@ async function buildUnifiedModelsResponseCore(
       prefixMode,
       aliasToProviderId,
       hideNoThinkVariants: settings.hideNoThinkVariants === true,
+    });
+
+    // Safe-providers policy: never advertise models from blocked providers.
+    const customNodePrefixes = new Set<string>(
+      (providerNodes as Array<{ prefix?: unknown }>)
+        .map((node) => node?.prefix)
+        .filter((prefix: unknown): prefix is string => typeof prefix === "string" && prefix !== "")
+    );
+    finalModels = finalModels.filter((model) => {
+      if (model?.owned_by === "combo") return true;
+      // Check the resolved provider only: a user-defined compatible node may
+      // reuse a short prefix that is also a blocked provider's alias (e.g. "gw").
+      const owner = typeof model?.owned_by === "string" ? model.owned_by : "";
+      const prefix = typeof model?.id === "string" ? model.id.split("/")[0] : "";
+      return ![owner, prefix].some((raw) => {
+        if (!raw) return false;
+        if (customNodePrefixes.has(raw)) return false;
+        const canonical = aliasToProviderId[raw] || raw;
+        return isProviderBlockedBySafetyPolicy(canonical);
+      });
     });
 
     const getDefaultContextFallback = (model: any): number | undefined => {

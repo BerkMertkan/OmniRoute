@@ -67,6 +67,7 @@ import { checkAndRefreshToken } from "../services/tokenRefresh";
 import { createHookContext, runHooks, initPreRequestRegistry } from "@/lib/middleware/registry";
 import { rejectPeerRequest } from "@/shared/resilience/peerRouting";
 import { isRuntimeProviderRetirementError } from "@/shared/constants/providerRetirement";
+import { isProviderSafetyError } from "@/shared/constants/providerSafety";
 import { isCommonChatGptWebRetirementError } from "@/shared/constants/chatgptWebRetirement";
 import { isChatGptWebCodexModel } from "@/shared/constants/chatgptWebCodex";
 import { deleteHandoff, getHandoff } from "@/lib/db/contextHandoffs";
@@ -1073,6 +1074,8 @@ async function handleChatImplementation(
         if (isMicrosoftDesignerWebProviderRetiredError(error)) return false;
         if (isRuntimeProviderRetirementError(error)) return false;
         if (isCommonChatGptWebRetirementError(error)) return false;
+        // Safe-providers policy: skip blocked targets so fallback continues.
+        if (isProviderSafetyError(error)) return false;
         throw error;
       }
       if (modelInfo?.errorType === "model_not_found") return "model_not_in_catalog";

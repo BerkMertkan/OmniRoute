@@ -30,6 +30,7 @@ import type {
 import { extractSessionAffinityKey } from "@/sse/services/auth";
 import { isMicrosoftDesignerWebRetiredProviderId } from "@/shared/constants/designerWebRetirement";
 import { isRuntimeRetiredProviderId } from "@/shared/constants/providerRetirement";
+import { isProviderBlockedBySafetyPolicy } from "@/shared/constants/providerSafety";
 import { isCommonChatGptWebRetiredProviderId } from "@/shared/constants/chatgptWebRetirement";
 import { filterChatSelectableModels } from "../modelEndpointPolicy.ts";
 import { DEFAULT_INTENT_CONFIG, type IntentClassifierConfig } from "../intentClassifier.ts";
@@ -483,7 +484,8 @@ export async function expandAutoComboCandidatePool(
               p.length > 0 &&
               !isMicrosoftDesignerWebRetiredProviderId(p) &&
               !isRuntimeRetiredProviderId(p) &&
-              !isCommonChatGptWebRetiredProviderId(p)
+              !isCommonChatGptWebRetiredProviderId(p) &&
+              !isProviderBlockedBySafetyPolicy(p)
           )
       ),
     ];

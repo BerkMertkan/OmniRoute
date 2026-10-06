@@ -19,6 +19,10 @@
  *      Each hop is recorded in call_logs.
  */
 
+import {
+  isProviderBlockedBySafetyPolicy,
+  PROVIDER_SAFETY_BLOCKED_ERROR_CODE,
+} from "@/shared/constants/providerSafety";
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import { z } from "zod";
 import { getApiKeyById, getApiKeyMetadata, validateApiKey } from "@/lib/db/apiKeys";
@@ -514,6 +518,18 @@ export async function handleCursorCliProxy(
   segments: readonly string[],
   overrides: Partial<CursorCliProxyDeps> = {}
 ): Promise<Response> {
+  // Safe-providers policy: cursor-api spends a Cursor plan outside the IDE.
+  if (isProviderBlockedBySafetyPolicy(PROVIDER_ID)) {
+    return new Response(
+      JSON.stringify({
+        error: {
+          message: "Cursor CLI passthrough is disabled by the safe-providers policy.",
+          code: PROVIDER_SAFETY_BLOCKED_ERROR_CODE,
+        },
+      }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
+  }
   const deps: CursorCliProxyDeps = { ...defaultDeps, ...overrides };
   const startedAt = deps.now();
   const path = normalizeCursorCliPath(segments);

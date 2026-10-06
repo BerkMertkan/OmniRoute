@@ -17,6 +17,7 @@
  */
 
 import { assertRuntimeProviderAvailable } from "@/shared/constants/providerRetirement";
+import { assertProviderAllowedBySafetyPolicy } from "@/shared/constants/providerSafety";
 
 import { getExecutor } from "../../executors/index.ts";
 import { isCliproxyapiDeepModeEnabled } from "../../executors/cliproxyapi.ts";
@@ -121,6 +122,7 @@ export async function resolveExecutorWithProxy(
 ) {
   assertMicrosoftDesignerWebProviderAvailable(prov);
   assertRuntimeProviderAvailable(prov);
+  assertProviderAllowedBySafetyPolicy(prov);
   assertCommonChatGptWebProviderAvailable(prov);
 
   // Per-connection routing override (#6339): the resolved connection can opt itself

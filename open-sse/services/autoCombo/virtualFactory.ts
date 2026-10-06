@@ -8,6 +8,7 @@ import type { ConnectionFields } from "@/lib/db/encryption";
 import { NOAUTH_PROVIDERS } from "@/shared/constants/providers";
 import { isMicrosoftDesignerWebRetiredProviderId } from "@/shared/constants/designerWebRetirement";
 import { isRuntimeRetiredProviderId } from "@/shared/constants/providerRetirement";
+import { isProviderBlockedBySafetyPolicy } from "@/shared/constants/providerSafety";
 import { isCommonChatGptWebRetiredProviderId } from "@/shared/constants/chatgptWebRetirement";
 import { hasUsableWebSessionCredential } from "@/shared/providers/webSessionCredentials";
 import { toNumber } from "@/shared/utils/numeric";
@@ -596,7 +597,8 @@ export async function prepareVirtualAutoComboInputs(
   const runtimeConnections = connections.filter(
     (connection) =>
       !isMicrosoftDesignerWebRetiredProviderId(connection.provider) &&
-      !isRuntimeRetiredProviderId(connection.provider)
+      !isRuntimeRetiredProviderId(connection.provider) &&
+      !isProviderBlockedBySafetyPolicy(connection.provider)
   );
   const hiddenModelsMap = getHiddenModelsByProvider();
   // #7622: a no-auth provider's own provider_connections row (#6557) can carry
@@ -832,6 +834,15 @@ export async function prepareVirtualAutoComboInputs(
     // Separate, optional ToS guard — independent of economic safety on purpose.
     const tosFilteredPool = filterTosAvoidCandidates(pool, settings.excludeTosAvoid === true);
     pool = applyStage(tosFilteredPool, "tos", "tos-avoid");
+
+    // Safe-providers policy (always on unless disabled by env): drops every
+    // candidate whose provider's terms forbid gateway use, incl. keyless ones.
+    const safetyFilteredPool = pool.filter(
+      (candidate) => !isProviderBlockedBySafetyPolicy(candidate.provider)
+    );
+    if (safetyFilteredPool.length !== pool.length) {
+      pool = applyStage(safetyFilteredPool, "tos", "provider-safety");
+    }
 
     return pool;
   };

@@ -1,6 +1,7 @@
 import { assertCommonChatGptWebProviderAvailable } from "@/shared/constants/chatgptWebRetirement";
 import { assertMicrosoftDesignerWebProviderAvailable } from "@/shared/constants/designerWebRetirement";
 import { assertRuntimeProviderAvailable } from "@/shared/constants/providerRetirement";
+import { assertProviderAllowedBySafetyPolicy } from "@/shared/constants/providerSafety";
 import type { BaseExecutor } from "./base.ts";
 import { getDefaultExecutor } from "./defaultResolver.ts";
 
@@ -36,6 +37,7 @@ const credentialExecutorCache = new Map<string, Promise<BaseExecutor>>();
 export async function getCredentialRefreshExecutor(provider: string): Promise<BaseExecutor> {
   assertMicrosoftDesignerWebProviderAvailable(provider);
   assertRuntimeProviderAvailable(provider);
+  assertProviderAllowedBySafetyPolicy(provider);
   assertCommonChatGptWebProviderAvailable(provider);
 
   let executor = credentialExecutorCache.get(provider);

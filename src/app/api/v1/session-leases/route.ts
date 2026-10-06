@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { isRuntimeProviderRetirementError } from "@/shared/constants/providerRetirement";
+import { isProviderSafetyError } from "@/shared/constants/providerSafety";
 import { isCommonChatGptWebRetirementError } from "@/shared/constants/chatgptWebRetirement";
 import { enforceApiKeyPolicy } from "@/shared/utils/apiKeyPolicy";
 import { CORS_HEADERS, handleCorsOptions } from "@/shared/utils/cors";
@@ -161,7 +162,11 @@ export async function POST(request: Request): Promise<Response> {
     const result = selection as ExclusiveLeaseSelectionResult;
     return json(200, lifecycle(result.exclusiveLease));
   } catch (cause) {
-    if (isRuntimeProviderRetirementError(cause) || isCommonChatGptWebRetirementError(cause)) {
+    if (
+      isRuntimeProviderRetirementError(cause) ||
+      isCommonChatGptWebRetirementError(cause) ||
+      isProviderSafetyError(cause)
+    ) {
       return error(cause.status, cause.code, cause.message);
     }
     if (cause instanceof LeaseContextError) return error(cause.status, cause.code, cause.message);

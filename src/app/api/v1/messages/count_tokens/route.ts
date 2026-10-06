@@ -3,6 +3,7 @@ import { v1CountTokensSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { countTextTokens, type TokenizerContext } from "@/shared/utils/tiktokenCounter";
 import { isRuntimeProviderRetirementError } from "@/shared/constants/providerRetirement";
+import { isProviderSafetyError } from "@/shared/constants/providerSafety";
 import { getExecutor } from "@omniroute/open-sse/executors/index.ts";
 import { buildErrorBody } from "@omniroute/open-sse/utils/error.ts";
 import { runWithProxyContext } from "@omniroute/open-sse/utils/proxyFetch.ts";
@@ -107,7 +108,11 @@ export async function POST(request) {
       }
     );
   } catch (error) {
-    if (isRuntimeProviderRetirementError(error) || isCommonChatGptWebRetirementError(error)) {
+    if (
+      isRuntimeProviderRetirementError(error) ||
+      isCommonChatGptWebRetirementError(error) ||
+      isProviderSafetyError(error)
+    ) {
       return new Response(
         JSON.stringify(
           buildErrorBody(error.status, error.message, null, {

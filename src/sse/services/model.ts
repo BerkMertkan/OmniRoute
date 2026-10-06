@@ -26,6 +26,10 @@ import {
   isRuntimeProviderRetirementError,
 } from "@/shared/constants/providerRetirement";
 import {
+  assertProviderAllowedBySafetyPolicy,
+  isProviderSafetyError,
+} from "@/shared/constants/providerSafety";
+import {
   assertCommonChatGptWebModelAvailable,
   assertCommonChatGptWebProviderAvailable,
   isCommonChatGptWebRetirementError,
@@ -489,6 +493,9 @@ export async function getModelInfo(modelStr) {
   // they cannot see the original prefix after either remapping path.
   assertRuntimeProviderAvailable(parsed.providerAlias);
   assertRuntimeProviderAvailable(parsed.provider);
+  // Safe-providers policy: reject providers whose terms forbid gateway use.
+  assertProviderAllowedBySafetyPolicy(parsed.providerAlias);
+  assertProviderAllowedBySafetyPolicy(parsed.provider);
   const { extendedContext } = parsed;
 
   // Fail closed before a custom compatible node or stripModelPrefix can reinterpret
@@ -497,6 +504,7 @@ export async function getModelInfo(modelStr) {
 
   const assertResolvedModelAvailable = (info: any) => {
     assertCommonChatGptWebProviderAvailable(info?.provider);
+    assertProviderAllowedBySafetyPolicy(info?.provider);
     return info;
   };
 
@@ -630,6 +638,14 @@ export async function getModelInfoOrRetirementResponse(modelId: string) {
     }
     if (isCommonChatGptWebRetirementError(error)) {
       return { error: commonChatGptWebRetirementResponse() };
+    }
+    if (isProviderSafetyError(error)) {
+      return {
+        error: errorResponse(error.status, error.message, {
+          type: "provider_error",
+          code: error.code,
+        }),
+      };
     }
     throw error;
   }

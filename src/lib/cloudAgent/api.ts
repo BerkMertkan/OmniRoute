@@ -1,5 +1,6 @@
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { getProviderConnections } from "@/lib/db/providers";
+import { isProviderBlockedBySafetyPolicy } from "@/shared/constants/providerSafety";
 import { resolveAllowedOrigin, getCorsStatus } from "@/server/cors/origins";
 import type { AgentCredentials } from "./baseAgent.ts";
 import type { CloudAgentTaskRow } from "./db.ts";
@@ -93,6 +94,8 @@ function getConnectionToken(connection: JsonRecord): string | null {
 export async function getCloudAgentCredentials(
   providerId: string
 ): Promise<AgentCredentials | null> {
+  // Safe-providers policy: no credentials for a blocked provider.
+  if (isProviderBlockedBySafetyPolicy(providerId)) return null;
   const connections = (await getProviderConnections({
     provider: providerId,
     isActive: true,
